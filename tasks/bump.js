@@ -203,24 +203,42 @@ module.exports = function(grunt) {
 
     // CREATE TAG
     runIf(opts.createTag, function() {
+      var cmd;
       var tagName = opts.tagName.replace('%VERSION%', globalVersion);
       var tagMessage = opts.tagMessage.replace('%VERSION%', globalVersion);
 
-      var cmd = 'git tag -a ' + tagName + ' -m "' + tagMessage + '"';
-      if (dryRun) {
-        grunt.log.ok('bump-dry: ' + cmd);
-        next();
-      } else {
-        exec(cmd , function(err, stdout, stderr) {
-          if (err) {
-            grunt.fatal('Can not create the tag:\n  ' + stderr);
-          }
-          grunt.log.ok('Tagged as "' + tagName + '"');
-          next();
-        });
-      }
-    });
 
+      // cmd = 'git log @{push}.. --oneline';
+      cmd = 'git log @{push}.. --date=iso8601 --pretty=format:"- %s"';
+
+      exec(cmd , function(err, stdout, stderr) {
+
+         if (err) {
+            grunt.fatal('Can not list the latest commits:\n  ' + stderr);
+         }
+
+         tagMessage = tagMessage+"\n"+stdout.split("\n").join(" \n");
+
+         grunt.log.ok('Tagged as "' + tagName + '"');
+
+         var cmd = 'git tag -a ' + tagName + ' -m "' + tagMessage + '"';
+
+         if (dryRun) {
+           grunt.log.ok('bump-dry: ' + cmd);
+           next();
+         } else {
+           exec(cmd , function(err, stdout, stderr) {
+             if (err) {
+               grunt.fatal('Can not create the tag:\n  ' + stderr);
+             }
+             next();
+           });
+         }
+         // next();
+      });
+
+      return
+    });
 
     // PUSH CHANGES
     runIf(opts.push, function() {
